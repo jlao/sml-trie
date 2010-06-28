@@ -30,7 +30,6 @@ struct
 	datatype 'a trie = 
 		Root of 'a option * 'a trie list
 	| Node of 'a option * char * 'a trie list
-	| Terminal of 'a * char
 
 	type 'a dict = 'a trie
 
@@ -45,9 +44,6 @@ struct
 			  | lookupList ((trie as Node(_, letter', _))::lst, key as letter::rest) =
 						if letter = letter' then lookup' (trie, rest)
 						else lookupList (lst, key)
-			  | lookupList ((trie as Terminal(_, letter'))::lst, key as letter::rest) =
-						if letter = letter' then lookup' (trie, rest)
-						else lookupList (lst, key)
 			  | lookupList (_, _) =
 						raise InvariantViolationException
 
@@ -56,12 +52,8 @@ struct
 			*)
 			and lookup' (Root(elem, _), nil) = elem
 			  | lookup' (Root(_, lst), key) = lookupList (lst, key)
-
 			  | lookup' (Node(elem, _, _), nil) = elem
 			  | lookup' (Node(elem, letter, lst), key) = lookupList (lst, key)
-
-			  | lookup' (Terminal(value, _), nil) = SOME(value)
-			  | lookup' (Terminal(_, _), _) = NONE
 		in
 			lookup' (trie, explode key)
 		end
@@ -83,16 +75,11 @@ struct
 					* The trie list does not contain a Root.
 				Effects: none
 			*)
-			fun insertChild (nil: 'a trie list, letter::nil: char list, value: 'a) = 
-						[ Terminal(value, letter) ]
+			fun insertChild (nil, letter::nil, value) = 
+						[ Node(SOME(value), letter, nil) ]
 			  | insertChild (nil, letter::rest, value) = 
 						[ Node(NONE, letter, insertChild (nil, rest, value)) ]
 				| insertChild ((trie as Node(_, letter', _))::lst, key as letter::rest, value) = 
-						if letter = letter' then
-							insert' (trie, rest, value) :: lst
-						else
-							trie :: insertChild (lst, key, value)
-				| insertChild ((trie as Terminal(_, letter'))::lst, key as letter::rest, value) = 
 						if letter = letter' then
 							insert' (trie, rest, value) :: lst
 						else
@@ -110,14 +97,10 @@ struct
 					* If the key is nil, assumes the current node is the destination.
 				Effects: none
 			*)
-			and insert' (Root(_, lst): 'a dict, nil: char list, value: 'a) = Root(SOME(value), lst)
+			and insert' (Root(_, lst), nil, value) = Root(SOME(value), lst)
 				| insert' (Root(elem, lst), key, value) = Root(elem, insertChild (lst, key, value))
-
 				| insert' (Node(_, letter, lst), nil, value) = Node(SOME(value), letter, lst)
 				| insert' (Node(elem, letter, lst), key, value) = Node(elem, letter, insertChild (lst, key, value))
-
-				| insert' (Terminal(_, letter), nil, value) = Terminal(value, letter)
-				| insert' (Terminal(elem, letter), key, value) = Node(SOME(elem), letter, insertChild (nil, key, value))
 		in
 			insert'(trie, explode key, value)
 		end
@@ -134,7 +117,6 @@ struct
 				fun childNodeLetters (lst: 'a trie list, id: char list): char list =
 					(foldr 
 						(fn (Node(_, letter, _), acc) => letter::acc
-							| (Terminal(_, letter), acc) => letter::acc
 							| _ => raise InvariantViolationException) nil lst)
 
 				(* val edgeStmt: string * string -> string *)
@@ -181,8 +163,6 @@ struct
 											labelNode (idStr, "") ^ 
 									 		allEdgesFrom (thisId, childLetters)) ^ childStr
 							end
-					| toString' (Terminal(value, letter), lbl) =
-							labelNode(implode(lbl @ [letter]), f(value))
 			in
 				prefix ^ (toString' (trie, [#"_", #"R"])) ^ suffix
 			end
