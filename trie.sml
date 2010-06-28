@@ -108,23 +108,23 @@ struct
 		(*
 			val toString: ('a -> string) -> 'a dict -> string
 		*)
-		fun toString (f: 'a -> string) (trie: 'a dict): string =
+		fun toString f trie =
 			let
 				val prefix = "digraph trie {\nnode [shape = circle];\n"
 				val suffix = "}\n"
 
 				(* val childNodeLetters: 'a trie list * char list -> char list *)
-				fun childNodeLetters (lst: 'a trie list, id: char list): char list =
+				fun childNodeLetters (lst, id) =
 					(foldr 
 						(fn (Node(_, letter, _), acc) => letter::acc
 							| _ => raise InvariantViolationException) nil lst)
 
-				(* val edgeStmt: string * string -> string *)
-				fun edgeStmt (start: string, dest: string, lbl: char) =
+				(* val edgeStmt: string * string * char -> string *)
+				fun edgeStmt (start, dest, lbl) =
 					start ^ " -> " ^ dest ^ " [ label = " ^ Char.toString(lbl) ^ " ];\n"
 
 				(* val allEdgesFrom: char list * char list *)
-				fun allEdgesFrom (start: char list, lst: char list): string = 
+				fun allEdgesFrom (start, lst) = 
 					(foldr 
 						(fn (letter, acc) => 
 							acc ^ edgeStmt(implode(start), implode(start @ [letter]), letter))
@@ -134,7 +134,7 @@ struct
 				fun labelNode (id: string, lbl: string) =
 					id ^ " [ label = \"" ^ lbl ^ "\" ];\n"
 
-				fun toString' (Root(elem, lst): 'a dict, id: char list): string =
+				fun toString' (Root(elem, lst), id) =
 							let
 								val idStr = implode(id)
 								val childLetters = childNodeLetters(lst, id)
